@@ -13,9 +13,13 @@ import math
 from rpn_msr.generate import imdb_proposals_det
 import tensorflow as tf
 from fast_rcnn.bbox_transform import clip_boxes, bbox_transform_inv
-import matplotlib.pyplot as plt
 from tensorflow.python.client import timeline
 import time
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import pylab
 
 def _get_image_blob(im):
     """Converts an image into a network input.
@@ -213,17 +217,13 @@ def im_detect(sess, net, im, boxes=None):
 
     return scores, pred_boxes
 
-
 def vis_detections(im, class_name, dets, thresh=0.8):
     """Visual debugging of detections."""
-    import matplotlib.pyplot as plt
     #im = im[:, :, (2, 1, 0)]
     for i in xrange(np.minimum(10, dets.shape[0])):
         bbox = dets[i, :4]
         score = dets[i, -1]
         if score > thresh:
-            #plt.cla()
-            #plt.imshow(im)
             plt.gca().add_patch(
                 plt.Rectangle((bbox[0], bbox[1]),
                               bbox[2] - bbox[0],
@@ -235,8 +235,12 @@ def vis_detections(im, class_name, dets, thresh=0.8):
                  bbox=dict(facecolor='blue', alpha=0.5),
                  fontsize=14, color='white')
 
-            plt.title('{}  {:.3f}'.format(class_name, score))
-    #plt.show()
+    plt.title(('detections with '
+                  'p(class | box) >= {:.1f}').format(thresh),
+                  fontsize=14)
+    plt.axis('off')
+    plt.tight_layout()
+    plt.draw()
 
 def apply_nms(all_boxes, thresh):
     """Apply non-maximum suppression to all predicted boxes output by the
@@ -268,7 +272,6 @@ def apply_nms(all_boxes, thresh):
             nms_boxes[cls_ind][im_ind] = dets[keep, :].copy()
     return nms_boxes
 
-
 def test_net(sess, net, imdb, weights_filename , max_per_image=300, thresh=0.05, vis=False):
     """Test a Fast R-CNN network on an image database."""
     num_images = len(imdb.image_index)
@@ -279,6 +282,7 @@ def test_net(sess, net, imdb, weights_filename , max_per_image=300, thresh=0.05,
                  for _ in xrange(imdb.num_classes)]
 
     output_dir = get_output_dir(imdb, weights_filename)
+
     # timers
     _t = {'im_detect' : Timer(), 'misc' : Timer()}
 
@@ -321,7 +325,10 @@ def test_net(sess, net, imdb, weights_filename , max_per_image=300, thresh=0.05,
                 vis_detections(image, imdb.classes[j], cls_dets)
             all_boxes[j][i] = cls_dets
         if vis:
-           plt.show()
+            save_path = os.path.join(output_dir, 'image_{:05d}.png'.format(i))
+            print save_path
+            plt.savefig(save_path)
+            plt.close()
         # Limit to max_per_image detections *over all classes*
         if max_per_image > 0:
             image_scores = np.hstack([all_boxes[j][i][:, -1]

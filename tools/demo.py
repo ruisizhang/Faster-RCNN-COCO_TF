@@ -4,20 +4,58 @@ from fast_rcnn.config import cfg
 from fast_rcnn.test import im_detect
 from fast_rcnn.nms_wrapper import nms
 from utils.timer import Timer
-import matplotlib.pyplot as plt
 import numpy as np
 import os, sys, cv2
 import argparse
 from networks.factory import get_network
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
+import glob
+
+
+'''
 CLASSES = ('__background__',
            'aeroplane', 'bicycle', 'bird', 'boat',
            'bottle', 'bus', 'car', 'cat', 'chair',
            'cow', 'diningtable', 'dog', 'horse',
            'motorbike', 'person', 'pottedplant',
            'sheep', 'sofa', 'train', 'tvmonitor')
+'''
 
+CLASSES = ('__background__',
+           'person',
+           'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck', 'boat',
+           'traffic light',
+           'fire hydrant',
+           'stop sign',
+           'parking meter',
+           'bench',
+           'bird',
+           'cat',
+           'dog',
+           'horse',
+           'sheep',
+           'cow',
+           'elephant',
+           'bear',
+           'zebra',
+           'giraffe',
+           'backpack',
+           'umbrella',
+           'handbag',
+           'tie',
+           'suitcase',
+           'frisbee', 'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard',
+           'tennis racket', 'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl',
+           'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake',
+           'chair', 'couch', 'potted plant', 'bed', 'dining table', 'toilet',
+           'tv', 'laptop', 'mouse', 'remote', 'keyboard', 'cell phone',
+           'microwave', 'oven', 'toaster', 'sink', 'refrigerator',
+           'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush',
+)
 
 #CLASSES = ('__background__','person','bike','motorbike','car','bus')
 
@@ -28,36 +66,34 @@ def vis_detections(im, class_name, dets,ax, thresh=0.5):
         return
 
     for i in inds:
+        print "SCORE LARGER THAN THRESH for class {}".format(class_name)
         bbox = dets[i, :4]
         score = dets[i, -1]
 
-        ax.add_patch(
+        plt.gca().add_patch(
             plt.Rectangle((bbox[0], bbox[1]),
                           bbox[2] - bbox[0],
                           bbox[3] - bbox[1], fill=False,
                           edgecolor='red', linewidth=3.5)
             )
-        ax.text(bbox[0], bbox[1] - 2,
+        plt.gca().text(bbox[0], bbox[1] - 2,
                 '{:s} {:.3f}'.format(class_name, score),
                 bbox=dict(facecolor='blue', alpha=0.5),
                 fontsize=14, color='white')
 
-    ax.set_title(('{} detections with '
-                  'p({} | box) >= {:.1f}').format(class_name, class_name,
-                                                  thresh),
+    plt.title(('detections with '
+                  'p(class | box) >= {:.1f}').format(thresh),
                   fontsize=14)
     plt.axis('off')
     plt.tight_layout()
     plt.draw()
 
-
-def demo(sess, net, image_name):
+def demo(sess, net, image_path):
     """Detect object classes in an image using pre-computed object proposals."""
 
     # Load the demo image
-    im_file = os.path.join(cfg.DATA_DIR, 'demo', image_name)
-    #im_file = os.path.join('/home/corgi/Lab/label/pos_frame/ACCV/training/000001/',image_name)
-    im = cv2.imread(im_file)
+    image_name = img.split('/')[-1].split('.')[0]
+    im = cv2.imread(image_path)
 
     # Detect all object classes and regress object bounds
     timer = Timer()
@@ -74,6 +110,9 @@ def demo(sess, net, image_name):
 
     CONF_THRESH = 0.8
     NMS_THRESH = 0.3
+
+    plt.cla()
+    plt.imshow(im)
     for cls_ind, cls in enumerate(CLASSES[1:]):
         cls_ind += 1 # because we skipped background
         cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
@@ -83,6 +122,11 @@ def demo(sess, net, image_name):
         keep = nms(dets, NMS_THRESH)
         dets = dets[keep, :]
         vis_detections(im, cls, dets, ax, thresh=CONF_THRESH)
+    if not os.path.exists("detections_test"):
+        os.makedirs("detections_test")
+    plt.savefig('detections_test/image_{}.png'.format(image_name))
+    plt.close()
+
 
 def parse_args():
     """Parse input arguments."""
@@ -96,6 +140,8 @@ def parse_args():
                         default='VGGnet_test')
     parser.add_argument('--model', dest='model', help='Model path',
                         default=' ')
+    parser.add_argument('--img-path', dest='img_path', help='Image directory path',
+                        default=' ')
 
     args = parser.parse_args()
 
@@ -107,32 +153,25 @@ if __name__ == '__main__':
 
     if args.model == ' ':
         raise IOError(('Error: Model not found.\n'))
-        
+
     # init session
     sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
     # load network
     net = get_network(args.demo_net)
     # load model
-    saver = tf.train.Saver(write_version=tf.train.SaverDef.V1)
+    saver = tf.train.Saver()
     saver.restore(sess, args.model)
    
-    #sess.run(tf.initialize_all_variables())
-
     print '\n\nLoaded network {:s}'.format(args.model)
 
-    # Warmup on a dummy image
-    im = 128 * np.ones((300, 300, 3), dtype=np.uint8)
-    for i in xrange(2):
-        _, _= im_detect(sess, net, im)
+    #im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
+    #            '001763.jpg', '004545.jpg']
 
-    im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
-                '001763.jpg', '004545.jpg']
+    img_path = args.img_path
+    img_paths = glob.glob(img_path+"/*")
 
-
-    for im_name in im_names:
+    for img in img_paths:
         print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
-        print 'Demo for data/demo/{}'.format(im_name)
-        demo(sess, net, im_name)
-
-    plt.show()
-
+        image_name = img.split('/')[-1].split('.')[0]
+        print 'Demo for {}'.format(image_name)
+        demo(sess, net, img)

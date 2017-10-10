@@ -1,8 +1,8 @@
-# Faster-RCNN_TF
+# Faster-RCNN-COCO_TF
 
-This is an experimental Tensorflow implementation of Faster RCNN - a convnet for object detection with a region proposal network.
-For details about R-CNN please refer to the paper [Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks](http://arxiv.org/pdf/1506.01497v3.pdf) by Shaoqing Ren, Kaiming He, Ross Girshick, Jian Sun.
+This repo is a modified fork of [Faster-RCNN_TF by smallcorgi](https://github.com/smallcorgi/Faster-RCNN_TF) which implements [Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks](http://arxiv.org/pdf/1506.01497v3.pdf) by Shaoqing Ren, Kaiming He, Ross Girshick, Jian Sun.
 
+The repo has been modified for training on [MS COCO](http://cocodataset.org/#home), in particular the 2014 dataset, as well as visualizing on a headless server. A pretrained model is also included below. 
 
 ### Requirements: software
 
@@ -10,114 +10,138 @@ For details about R-CNN please refer to the paper [Faster R-CNN: Towards Real-Ti
 
 2. Python packages you might not have: `cython`, `python-opencv`, `easydict`
 
-### Requirements: hardware
-
-1. For training the end-to-end version of Faster R-CNN with VGG16, 3G of GPU memory is sufficient (using CUDNN)
-
-### Installation (sufficient for the demo)
+### Installation
 
 1. Clone the Faster R-CNN repository
-  ```Shell
-  # Make sure to clone with --recursive
-  git clone --recursive https://github.com/smallcorgi/Faster-RCNN_TF.git
-  ```
+	```bash
+	# Make sure to clone with --recursive
+	git clone --recursive https://github.com/dxyang/Faster-RCNN-COCO_TF.git
+	```
 
-2. Build the Cython modules
-    ```Shell
-    cd $FRCN_ROOT/lib
-    make
-    ```
+2. Build pycocotools modules
+	```bash
+	cd $FRCN_ROOT/lib
+	git clone https://github.com/cocodataset/cocoapi.git
+	cd cocoapi/PythonAPI
+	make
+	cd ../..
+	mv cocoapi/PythonAPI/pycocotools pycocotools
+	rm -rf cocoapi
+	```
 
-### Demo
+3. Build the Cython modules
+	```bash
+	cd $FRCN_ROOT/lib
+	make
+	```
 
-*After successfully completing [basic installation](#installation-sufficient-for-the-demo)*, you'll be ready to run the demo.
-
-Download model training on PASCAL VOC 2007  [[Google Drive]](https://drive.google.com/open?id=0ByuDEGFYmWsbZ0EzeUlHcGFIVWM) [[Dropbox]](https://www.dropbox.com/s/cfz3blmtmwj6bdh/VGGnet_fast_rcnn_iter_70000.ckpt?dl=0)
-
-To run the demo
-```Shell
-cd $FRCN_ROOT
-python ./tools/demo.py --model model_path
-```
-The demo performs detection using a VGG16 network trained for detection on PASCAL VOC 2007.
 
 ### Training Model
-1. Download the training, validation, test data and VOCdevkit
-
-	```Shell
-	wget http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtrainval_06-Nov-2007.tar
-	wget http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtest_06-Nov-2007.tar
-	wget http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCdevkit_08-Jun-2007.tar
+1. Install gsutil if you haven't already
+	```bash
+	curl https://sdk.cloud.google.com | bash
 	```
 
-2. Extract all of these tars into one directory named `VOCdevkit`
-
-	```Shell
-	tar xvf VOCtrainval_06-Nov-2007.tar
-	tar xvf VOCtest_06-Nov-2007.tar
-	tar xvf VOCdevkit_08-Jun-2007.tar
+2. Download the training, validation, test data for MS COCO
+	```bash
+	cd $FRCN_ROOT/data
+	mkdir coco; cd coco
+	mkdir images; cd images
+	mkdir train2014
+	mkdir test2014
+	mkdir val2014
+	gsutil -m rsync gs://images.cocodataset.org/train2014 train2014
+	gsutil -m rsync gs://images.cocodataset.org/test2014 test2014
+	gsutil -m rsync gs://images.cocodataset.org/val2014 val2014
 	```
 
-3. It should have this basic structure
+3. Download the annotations for MS COCO and unzip
+	```bash
+	cd $FRCN_ROOT/data
+	gsutil -m rsync gs://images.cocodataset.org/annotations coco
+	cd coco
+	unzip annotations_trainval2014.zip
+	unzip image_info_test2014.zip
+	rm *.zip
+	```
 
-	```Shell
-  	$VOCdevkit/                           # development kit
-  	$VOCdevkit/VOCcode/                   # VOC utility code
-  	$VOCdevkit/VOC2007                    # image sets, annotations, etc.
-  	# ... and several other directories ...
-  	```
+4. Download the annotations for the 5000 image minival subset of COCO val2014 as mentioned [here](https://github.com/rbgirshick/py-faster-rcnn/tree/master/data)
+	```bash
+	cd $FRCN_ROOT/data/coco/annotations
+	wget https://dl.dropboxusercontent.com/s/o43o90bna78omob/instances_minival2014.json.zip
+	wget https://dl.dropboxusercontent.com/s/s3tw5zcg7395368/instances_valminusminival2014.json.zip
+	unzip instances_minival2014.json.zip; rm instances_minival2014.json.zip
+	unzip instances_valminusminival2014.json.zip; rm instances_valminusminival2014.json.zip
+	```
 
-4. Create symlinks for the PASCAL VOC dataset
-
-	```Shell
-    cd $FRCN_ROOT/data
-    ln -s $VOCdevkit VOCdevkit2007
-    ```
-    
-5. Download pre-trained ImageNet models
-
-   Download the pre-trained ImageNet models [[Google Drive]](https://drive.google.com/open?id=0ByuDEGFYmWsbNVF5eExySUtMZmM) [[Dropbox]](https://www.dropbox.com/s/po2kzdhdgl4ix55/VGG_imagenet.npy?dl=0)
-   
-   	```Shell
-    mv VGG_imagenet.npy $FRCN_ROOT/data/pretrain_model/VGG_imagenet.npy
-    ```
-
-6. Run script to train and test model
-	```Shell
+5. Download the pre-trained ImageNet model [[Google Drive]](https://drive.google.com/open?id=0ByuDEGFYmWsbNVF5eExySUtMZmM) [[Dropbox]](https://www.dropbox.com/s/po2kzdhdgl4ix55/VGG_imagenet.npy?dl=0)
+	```bash
 	cd $FRCN_ROOT
-	./experiments/scripts/faster_rcnn_end2end.sh $DEVICE $DEVICE_ID VGG16 pascal_voc
+	wget https://www.dropbox.com/s/po2kzdhdgl4ix55/VGG_imagenet.npy
+	mkdir data/pretrain_model
+	mv VGG_imagenet.npy data/pretrain_model/VGG_imagenet.npy
 	```
-  DEVICE is either cpu/gpu
 
-### The result of testing on PASCAL VOC 2007 
+6. Create an output directory for log files
+	```bash
+	cd $FRCN_ROOT
+	mkdir experiments/logs
+	```
 
-| Classes       | AP     |
-|-------------|--------|
-| aeroplane   | 0.698 |
-| bicycle     | 0.788 |
-| bird        | 0.657 |
-| boat        | 0.565 |
-| bottle      | 0.478 |
-| bus         | 0.762 |
-| car         | 0.797 |
-| cat         | 0.793 |
-| chair       | 0.479 |
-| cow         | 0.724 |
-| diningtable | 0.648 |
-| dog         | 0.803 |
-| horse       | 0.797 |
-| motorbike   | 0.732 |
-| person      | 0.770 |
-| pottedplant | 0.384 |
-| sheep       | 0.664 |
-| sofa        | 0.650 |
-| train       | 0.766 |
-| tvmonitor   | 0.666 |
-| mAP        | 0.681 |
+7. Run script to train and test model
+	```bash
+	cd $FRCN_ROOT
+	./experiments/scripts/faster_rcnn_end2end.sh $DEVICE $DEVICE_ID VGG16 coco
+	```
+  - DEVICE is either cpu/gpu
 
+### Testing Model
+Run the following command.
 
-###References
-[Faster R-CNN caffe version](https://github.com/rbgirshick/py-faster-rcnn)
+```bash
+python ./tools/test_net.py \
+		--device gpu \
+		--device_id 0 \
+		--weights output/faster_rcnn_end2end/coco_2014_train/VGGnet_fast_rcnn_iter_490000.ckpt \
+		--cfg experiments/cfgs/faster_rcnn_end2end.yml \
+		--imdb coco_2014_minival \
+		--network VGGnet_test	\
+		--vis False
+```
 
-[A tensorflow implementation of SubCNN (working progress)](https://github.com/yuxng/SubCNN_TF)
+- Changing ```vis``` to ```True``` will save images with all detections above 0.8 for every image in the testing set.
+- The checkpoint files folder contains the following:
+	```bash
+	cd output/faster_rcnn_end2end/coco_2014_train
+	ls
+	# VGGnet_fast_rcnn_iter_490000.ckpt.data-00000-of-00001
+	# VGGnet_fast_rcnn_iter_490000.ckpt.index
+	# VGGnet_fast_rcnn_iter_490000.ckpt.meta
+	```
 
+### Detections on your own images
+Run the following command.
+
+```bash
+python ./tools/demo.py --model output/faster_rcnn_end2end/coco_2014_train/VGGnet_fast_rcnn_iter_490000.ckpt --img-path path_to_img_folder
+```
+
+All your annotated images will be saved in a directory called ```detections_test```
+
+### The result of testing on coco_2014_minival 
+- Tensorflow model [[Google Drive]](https://drive.google.com/file/d/0Bw0qMqgwZcafZlRqRDYxSnBkNFE/view?usp=sharing)
+- Results are similar to rbgirshick's [Caffe version](https://github.com/rbgirshick/py-faster-rcnn/blob/master/models/README.md#coco-faster-r-cnn-vgg-16-trained-using-end-to-end)
+```
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.206
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.397
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.192
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.048
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.232
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.340
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.208
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.293
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.297
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.072
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.348
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.493
+```

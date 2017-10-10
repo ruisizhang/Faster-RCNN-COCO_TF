@@ -4,7 +4,7 @@ from networks.network import Network
 
 #define
 
-n_classes = 21
+n_classes = 81 # VGG has 80 classes (81) # VOC has 20 classes (21)
 _feat_stride = [16,]
 anchor_scales = [8, 16, 32]
 

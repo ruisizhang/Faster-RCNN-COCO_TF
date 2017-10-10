@@ -45,7 +45,6 @@ case $DATASET in
 esac
 
 LOG="experiments/logs/faster_rcnn_end2end_${NET}_${EXTRA_ARGS_SLUG}.txt.`date +'%Y-%m-%d_%H-%M-%S'`"
-exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
 
 time python ./tools/train_net.py --device ${DEV} --device_id ${DEV_ID} \
@@ -54,7 +53,7 @@ time python ./tools/train_net.py --device ${DEV} --device_id ${DEV_ID} \
   --iters ${ITERS} \
   --cfg experiments/cfgs/faster_rcnn_end2end.yml \
   --network VGGnet_train \
-  ${EXTRA_ARGS}
+  ${EXTRA_ARGS} | tee -a "$LOG"
 
 set +x
 NET_FINAL=`grep -B 1 "done solving" ${LOG} | grep "Wrote snapshot" | awk '{print $4}'`
@@ -65,4 +64,4 @@ time python ./tools/test_net.py --device ${DEV} --device_id ${DEV_ID} \
   --imdb ${TEST_IMDB} \
   --cfg experiments/cfgs/faster_rcnn_end2end.yml \
   --network VGGnet_test \
-  ${EXTRA_ARGS}
+  ${EXTRA_ARGS} | tee -a "$LOG"

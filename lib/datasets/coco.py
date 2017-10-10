@@ -64,7 +64,8 @@ class coco(imdb):
                                               self._COCO.getCatIds()))
         self._image_index = self._load_image_set_index()
         # Default to roidb handler
-        self.set_proposal_method('selective_search')
+        #self.set_proposal_method('selective_search')
+        self._roidb_handler = self.gt_roidb
         self.competition_mode(False)
 
         # Some image sets are "views" (i.e. subsets) into others.

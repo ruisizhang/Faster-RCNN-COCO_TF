@@ -15,6 +15,8 @@ import datasets.kitti
 import datasets.kitti_tracking
 import numpy as np
 
+from datasets.coco import *
+
 def _selective_search_IJCV_top_k(split, year, top_k):
     """Return an imdb that uses the top k proposals from the selective search
     IJCV code.

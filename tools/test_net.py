@@ -47,6 +47,9 @@ def parse_args():
     parser.add_argument('--network', dest='network_name',
                         help='name of the network',
                         default=None, type=str)
+    parser.add_argument('--vis', dest='vis',
+                        help='visualize testing',
+                        default=False, type=bool)
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -67,9 +70,9 @@ if __name__ == '__main__':
     print('Using config:')
     pprint.pprint(cfg)
 
-    while not os.path.exists(args.model) and args.wait:
-        print('Waiting for {} to exist...'.format(args.model))
-        time.sleep(10)
+    #while not os.path.exists(args.model) and args.wait:
+    #    print('Waiting for {} to exist...'.format(args.model))
+    #    time.sleep(10)
 
     weights_filename = os.path.splitext(os.path.basename(args.model))[0]
 
@@ -94,4 +97,4 @@ if __name__ == '__main__':
     saver.restore(sess, args.model)
     print ('Loading model weights from {:s}').format(args.model)
 
-    test_net(sess, network, imdb, weights_filename)
+    test_net(sess, network, imdb, weights_filename, vis=args.vis)
