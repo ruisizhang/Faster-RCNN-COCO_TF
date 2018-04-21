@@ -58,7 +58,6 @@ class Network(object):
                             if not ignore_missing:
 
                                 raise
-
     def feed(self, *args):
         assert len(args)!=0
         self.inputs = []

@@ -29,9 +29,13 @@ class VGGnet_train(Network):
 
             self.bbox_weights_assign = weights.assign(self.bbox_weights)
             self.bbox_bias_assign = biases.assign(self.bbox_biases)
-
+            
+    def upsample(output1, output2):
+        #TODO
+        return output2
+        
     def setup(self):
-        (self.feed('data')
+        '''(self.feed('data')
              .conv(3, 3, 64, 1, 1, name='conv1_1', trainable=False)
              .conv(3, 3, 64, 1, 1, name='conv1_2', trainable=False)
              .max_pool(2, 2, 2, 2, padding='VALID', name='pool1')
@@ -48,9 +52,35 @@ class VGGnet_train(Network):
              .max_pool(2, 2, 2, 2, padding='VALID', name='pool4')
              .conv(3, 3, 512, 1, 1, name='conv5_1')
              .conv(3, 3, 512, 1, 1, name='conv5_2')
-             .conv(3, 3, 512, 1, 1, name='conv5_3'))
+             .conv(3, 3, 512, 1, 1, name='conv5_3'))'''
+        
+        self.feed('data')
+             .conv(3, 3, 64, 1, 1, name='conv1_1', trainable=False)
+             .conv(3, 3, 64, 1, 1, name='conv1_2', trainable=False)
+            
+        output1 = self.feed('conv1_2')
+        
+        self.feed('conv1_2')
+             .max_pool(2, 2, 2, 2, padding='VALID', name='pool1')
+             .conv(3, 3, 128, 1, 1, name='conv2_1', trainable=False)
+             .conv(3, 3, 128, 1, 1, name='conv2_2', trainable=False)
+             .max_pool(2, 2, 2, 2, padding='VALID', name='pool2')
+             .conv(3, 3, 256, 1, 1, name='conv3_1')
+             .conv(3, 3, 256, 1, 1, name='conv3_2')
+             .conv(3, 3, 256, 1, 1, name='conv3_3')
+             .max_pool(2, 2, 2, 2, padding='VALID', name='pool3')
+             .conv(3, 3, 512, 1, 1, name='conv4_1')
+             .conv(3, 3, 512, 1, 1, name='conv4_2')
+             .conv(3, 3, 512, 1, 1, name='conv4_3')
+             .max_pool(2, 2, 2, 2, padding='VALID', name='pool4')
+             .conv(3, 3, 512, 1, 1, name='conv5_1')
+             .conv(3, 3, 512, 1, 1, name='conv5_2')
+             .conv(3, 3, 512, 1, 1, name='conv5_3')
+        output2 = self.feed('conv5_3')
+        
+        output = upsample(output1, output2) ##upsample
         #========= RPN ============
-        (self.feed('conv5_3')
+        (self.feed(output)  #self.feed('conv5_3')
              .conv(3,3,512,1,1,name='rpn_conv/3x3')
              .conv(1,1,len(anchor_scales)*3*2 ,1 , 1, padding='VALID', relu = False, name='rpn_cls_score'))
 
