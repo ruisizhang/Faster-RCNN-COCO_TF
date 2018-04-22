@@ -8,6 +8,11 @@ n_classes = 81 # VGG has 80 classes (81) # VOC has 20 classes (21)
 _feat_stride = [16,]
 anchor_scales = [8, 16, 32]
 
+def upsample(output1, output2):
+    #TODO
+    return output2
+    
+    
 class VGGnet_train(Network):
     def __init__(self, trainable=True):
         self.inputs = []
@@ -29,13 +34,10 @@ class VGGnet_train(Network):
 
             self.bbox_weights_assign = weights.assign(self.bbox_weights)
             self.bbox_bias_assign = biases.assign(self.bbox_biases)
-            
-    def upsample(output1, output2):
-        #TODO
-        return output2
         
     def setup(self):
-        '''(self.feed('data')
+	
+        (self.feed('data')
              .conv(3, 3, 64, 1, 1, name='conv1_1', trainable=False)
              .conv(3, 3, 64, 1, 1, name='conv1_2', trainable=False)
              .max_pool(2, 2, 2, 2, padding='VALID', name='pool1')
@@ -47,40 +49,25 @@ class VGGnet_train(Network):
              .conv(3, 3, 256, 1, 1, name='conv3_3')
              .max_pool(2, 2, 2, 2, padding='VALID', name='pool3')
              .conv(3, 3, 512, 1, 1, name='conv4_1')
-             .conv(3, 3, 512, 1, 1, name='conv4_2')
-             .conv(3, 3, 512, 1, 1, name='conv4_3')
-             .max_pool(2, 2, 2, 2, padding='VALID', name='pool4')
-             .conv(3, 3, 512, 1, 1, name='conv5_1')
-             .conv(3, 3, 512, 1, 1, name='conv5_2')
-             .conv(3, 3, 512, 1, 1, name='conv5_3'))'''
-        
-        self.feed('data')
-             .conv(3, 3, 64, 1, 1, name='conv1_1', trainable=False)
-             .conv(3, 3, 64, 1, 1, name='conv1_2', trainable=False)
-            
-        output1 = self.feed('conv1_2')
-        
-        self.feed('conv1_2')
-             .max_pool(2, 2, 2, 2, padding='VALID', name='pool1')
-             .conv(3, 3, 128, 1, 1, name='conv2_1', trainable=False)
-             .conv(3, 3, 128, 1, 1, name='conv2_2', trainable=False)
-             .max_pool(2, 2, 2, 2, padding='VALID', name='pool2')
-             .conv(3, 3, 256, 1, 1, name='conv3_1')
-             .conv(3, 3, 256, 1, 1, name='conv3_2')
-             .conv(3, 3, 256, 1, 1, name='conv3_3')
-             .max_pool(2, 2, 2, 2, padding='VALID', name='pool3')
-             .conv(3, 3, 512, 1, 1, name='conv4_1')
-             .conv(3, 3, 512, 1, 1, name='conv4_2')
+	     .conv(3, 3, 512, 1, 1, name='conv4_2')
              .conv(3, 3, 512, 1, 1, name='conv4_3')
              .max_pool(2, 2, 2, 2, padding='VALID', name='pool4')
              .conv(3, 3, 512, 1, 1, name='conv5_1')
              .conv(3, 3, 512, 1, 1, name='conv5_2')
              .conv(3, 3, 512, 1, 1, name='conv5_3')
-        output2 = self.feed('conv5_3')
+	     .upsample('conv5_3', 'conv5_2', name = 'upsample'))
         
-        output = upsample(output1, output2) ##upsample
+        #tensor1 = tf.get_default_graph().get_tensor_by_name('conv5_3/conv5_3:0')
+        #tensor2 = tf.get_default_graph().get_tensor_by_name('conv4_2/conv4_2:0')
+        #print 'hellw'
+	#self.feed('upsample')
+	#print "world"
+        #tensor3 = tf.add(tensor1, tensor2, "new")
+        #print tensor3
+        #.upsample('upsample', 'conv5_3'))
+        
         #========= RPN ============
-        (self.feed(output)  #self.feed('conv5_3')
+        (self.feed('upsample')
              .conv(3,3,512,1,1,name='rpn_conv/3x3')
              .conv(1,1,len(anchor_scales)*3*2 ,1 , 1, padding='VALID', relu = False, name='rpn_cls_score'))
 
@@ -108,7 +95,7 @@ class VGGnet_train(Network):
 
 
         #========= RCNN ============
-        (self.feed('conv5_3', 'roi-data')
+        (self.feed('upsample', 'roi-data')
              .roi_pool(7, 7, 1.0/16, name='pool_5')
              .fc(4096, name='fc6')
              .dropout(0.5, name='drop6')

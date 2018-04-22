@@ -117,6 +117,21 @@ class Network(object):
             return tf.nn.bias_add(conv, biases, name=scope.name)
 
     @layer
+    def upsample(self, input, tensor1_name, tensor2_name, name = 'newname'):
+        realtsname1 = tensor1_name + '/' + tensor1_name + ':0'
+	realtsname2 = tensor2_name + '/' + tensor2_name + ':0'
+	tensor1 = tf.get_default_graph().get_tensor_by_name(realtsname1)
+        tensor2 = tf.get_default_graph().get_tensor_by_name(realtsname2)
+        tensor = tf.add(tensor1, tensor2, name = name)
+        print "hello2"
+	print tensor
+	print "world2"
+	print realtsname1
+	print 'helloworld3'
+        return tensor
+
+        
+    @layer
     def relu(self, input, name):
         return tf.nn.relu(input, name=name)
 
