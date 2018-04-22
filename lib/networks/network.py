@@ -122,12 +122,18 @@ class Network(object):
 	realtsname2 = tensor2_name + '/' + tensor2_name + ':0'
 	tensor1 = tf.get_default_graph().get_tensor_by_name(realtsname1)
         tensor2 = tf.get_default_graph().get_tensor_by_name(realtsname2)
-        tensor = tf.add(tensor1, tensor2, name = name)
-        print "hello2"
-	print tensor
-	print "world2"
-	print realtsname1
-	print 'helloworld3'
+        tensor = tf.add(tensor1/tf.constant(2.0), tensor2/tf.constant(2.0), name = name)
+        #print "-------------------------------------"
+	#print tf.get_default_graph().get_tensor_by_name('conv1_1/conv1_1:0').get_shape()
+	#print tf.get_default_graph().get_tensor_by_name('conv2_1/conv2_1:0').get_shape()
+        #print tf.get_default_graph().get_tensor_by_name('conv3_1/conv3_1:0').get_shape()
+        #print tf.get_default_graph().get_tensor_by_name('conv4_1/conv4_1:0').get_shape()
+        #print tf.get_default_graph().get_tensor_by_name('conv5_1/conv5_1:0').get_shape()
+        #print tensor.shape
+	#print tf.shape(tensor)
+	#print tensor.get_shape().as_list()
+	#print "====================================="
+	
         return tensor
 
         

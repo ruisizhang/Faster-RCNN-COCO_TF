@@ -33,9 +33,10 @@ class VGGnet_test(Network):
              .max_pool(2, 2, 2, 2, padding='VALID', name='pool4')
              .conv(3, 3, 512, 1, 1, name='conv5_1')
              .conv(3, 3, 512, 1, 1, name='conv5_2')
-             .conv(3, 3, 512, 1, 1, name='conv5_3'))
+             .conv(3, 3, 512, 1, 1, name='conv5_3')
+	     .upsample('conv5_3', 'conv5_2', name = 'upsample'))
 
-        (self.feed('conv5_3')
+        (self.feed('upsample')
              .conv(3,3,512,1,1,name='rpn_conv/3x3')
              .conv(1,1,len(anchor_scales)*3*2,1,1,padding='VALID',relu = False,name='rpn_cls_score'))
 
@@ -52,7 +53,7 @@ class VGGnet_test(Network):
         (self.feed('rpn_cls_prob_reshape','rpn_bbox_pred','im_info')
              .proposal_layer(_feat_stride, anchor_scales, 'TEST', name = 'rois'))
         
-        (self.feed('conv5_3', 'rois')
+        (self.feed('upsample', 'rois')
              .roi_pool(7, 7, 1.0/16, name='pool_5')
              .fc(4096, name='fc6')
              .fc(4096, name='fc7')
