@@ -34,7 +34,7 @@ class VGGnet_test(Network):
              .conv(3, 3, 512, 1, 1, name='conv5_1')
              .conv(3, 3, 512, 1, 1, name='conv5_2')
              .conv(3, 3, 512, 1, 1, name='conv5_3')
-	     .upsample('conv5_3', 'conv5_2', name = 'upsample'))
+	     .upsample('conv5_3', 'conv3_3', 3, 3, 512, 1, 1, name = 'upsample'))
 
         (self.feed('upsample')
              .conv(3,3,512,1,1,name='rpn_conv/3x3')

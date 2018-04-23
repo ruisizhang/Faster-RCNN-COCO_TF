@@ -117,22 +117,55 @@ class Network(object):
             return tf.nn.bias_add(conv, biases, name=scope.name)
 
     @layer
-    def upsample(self, input, tensor1_name, tensor2_name, name = 'newname'):
+    def upsample(self, input, tensor1_name, tensor2_name, k_h, k_w, c_o, s_h, s_w, name = 'newname', relu=False, padding=DEFAULT_PADDING, group=1, trainable=True):
         realtsname1 = tensor1_name + '/' + tensor1_name + ':0'
-	realtsname2 = tensor2_name + '/' + tensor2_name + ':0'
-	tensor1 = tf.get_default_graph().get_tensor_by_name(realtsname1)
+        realtsname2 = tensor2_name + '/' + tensor2_name + ':0'
+        tensor1 = tf.get_default_graph().get_tensor_by_name(realtsname1)
         tensor2 = tf.get_default_graph().get_tensor_by_name(realtsname2)
-        tensor = tf.add(tensor1/tf.constant(2.0), tensor2/tf.constant(2.0), name = name)
+        
+        c_i = tensor2.get_shape()[-1]
+        print c_i, c_o
+	deconvolve = lambda i, k: tf.nn.conv2d_transpose(i, k, [4, 3, 3, c_o], [1, s_h, s_w, 1], padding='VALID')#padding)
+        with tf.variable_scope(name) as scope:
+
+            init_weights = tf.truncated_normal_initializer(0.0, stddev=0.01)
+            init_biases = tf.constant_initializer(0.0)
+            kernel = self.make_var('weights', [k_h, k_w, c_o,  c_i/group], init_weights, trainable)
+            biases = self.make_var('biases', [c_o], init_biases, trainable)
+
+            if group==1:
+		print "tensor1", tensor1
+		print "tensor2", tensor2
+                print "bias", biases.get_shape()
+		print "kernel", kernel.get_shape()
+		deconv = deconvolve(tensor2, kernel)
+		#deconv = tf.stop_gradient(deconv)
+            else:
+                input_groups = tf.split(3, group, input)
+                kernel_groups = tf.split(3, group, kernel)
+                output_groups = [deconvolve(i, k) for i,k in zip(input_groups, kernel_groups)]
+                deconv = tf.concat(3, output_groups)
+            if relu:
+                bias = tf.nn.bias_add(deconv, biases)
+                tensor2 = tf.nn.relu(bias, name=scope.name)
+            tensor2 = tf.nn.bias_add(deconv, biases, name=scope.name)
+	    tensor3 = tensor1/tf.constant(2.0)
+	    tensor4 = tensor2/tf.constant(2.0)
+	    tensor4 = tf.stop_gradient(tensor4)
+	    print "tensor2again ", tensor2
+
+        tensor = tf.add(tensor3, tensor4, name = name)
+	#tensor = tf.add(tensor1/tf.constant(2.0), tensor2/tf.constant(2.0), name = name)
         #print "-------------------------------------"
-	#print tf.get_default_graph().get_tensor_by_name('conv1_1/conv1_1:0').get_shape()
-	#print tf.get_default_graph().get_tensor_by_name('conv2_1/conv2_1:0').get_shape()
+        #print tf.get_default_graph().get_tensor_by_name('conv1_1/conv1_1:0').get_shape()
+        #print tf.get_default_graph().get_tensor_by_name('conv2_1/conv2_1:0').get_shape()
         #print tf.get_default_graph().get_tensor_by_name('conv3_1/conv3_1:0').get_shape()
         #print tf.get_default_graph().get_tensor_by_name('conv4_1/conv4_1:0').get_shape()
         #print tf.get_default_graph().get_tensor_by_name('conv5_1/conv5_1:0').get_shape()
         #print tensor.shape
-	#print tf.shape(tensor)
-	#print tensor.get_shape().as_list()
-	#print "====================================="
+        #print tf.shape(tensor)
+        #print tensor.get_shape().as_list()
+        #print "====================================="
 	
         return tensor
 
